@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <algorithm>
 #include <chrono>
+#include <iostream>
 
 #define RLIGHTS_IMPLEMENTATION
 #include "rlights.h"
@@ -47,6 +48,104 @@ int AddClipShader(Shader shader)
 // random float between two values
 float static randomRange(float min, float max) {
 	return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
+}
+
+static Vector4 *GetImageDataNormalized(Image image)
+{
+    Vector4 *pixels = (Vector4 *)RL_MALLOC(image.width*image.height*sizeof(Vector4));
+
+    if (image.format >= COMPRESSED_DXT1_RGB)
+      std::cerr << "Warning IMAGE: Pixel data retrieval not supported for compressed image formats" << std::endl;
+      //TRACELOG(LOG_WARNING, "IMAGE: Pixel data retrieval not supported for compressed image formats");
+    else
+    {
+        for (int i = 0, k = 0; i < image.width*image.height; i++)
+        {
+            switch (image.format)
+            {
+                case UNCOMPRESSED_GRAYSCALE:
+                {
+                    pixels[i].x = (float)((unsigned char *)image.data)[i]/255.0f;
+                    pixels[i].y = (float)((unsigned char *)image.data)[i]/255.0f;
+                    pixels[i].z = (float)((unsigned char *)image.data)[i]/255.0f;
+                    pixels[i].w = 1.0f;
+                } break;
+                case UNCOMPRESSED_GRAY_ALPHA:
+                {
+                    pixels[i].x = (float)((unsigned char *)image.data)[k]/255.0f;
+                    pixels[i].y = (float)((unsigned char *)image.data)[k]/255.0f;
+                    pixels[i].z = (float)((unsigned char *)image.data)[k]/255.0f;
+                    pixels[i].w = (float)((unsigned char *)image.data)[k + 1]/255.0f;
+                    k += 2;
+                } break;
+                case UNCOMPRESSED_R5G5B5A1:
+                {
+                    unsigned short pixel = ((unsigned short *)image.data)[i];
+                    pixels[i].x = (float)((pixel & 0b1111100000000000) >> 11)*(1.0f/31);
+                    pixels[i].y = (float)((pixel & 0b0000011111000000) >> 6)*(1.0f/31);
+                    pixels[i].z = (float)((pixel & 0b0000000000111110) >> 1)*(1.0f/31);
+                    pixels[i].w = ((pixel & 0b0000000000000001) == 0)? 0.0f : 1.0f;
+                } break;
+                case UNCOMPRESSED_R5G6B5:
+                {
+                    unsigned short pixel = ((unsigned short *)image.data)[i];
+                    pixels[i].x = (float)((pixel & 0b1111100000000000) >> 11)*(1.0f/31);
+                    pixels[i].y = (float)((pixel & 0b0000011111100000) >> 5)*(1.0f/63);
+                    pixels[i].z = (float)(pixel & 0b0000000000011111)*(1.0f/31);
+                    pixels[i].w = 1.0f;
+                } break;
+                case UNCOMPRESSED_R4G4B4A4:
+                {
+                    unsigned short pixel = ((unsigned short *)image.data)[i];
+                    pixels[i].x = (float)((pixel & 0b1111000000000000) >> 12)*(1.0f/15);
+                    pixels[i].y = (float)((pixel & 0b0000111100000000) >> 8)*(1.0f/15);
+                    pixels[i].z = (float)((pixel & 0b0000000011110000) >> 4)*(1.0f/15);
+                    pixels[i].w = (float)(pixel & 0b0000000000001111)*(1.0f/15);
+                } break;
+                case UNCOMPRESSED_R8G8B8A8:
+                {
+                    pixels[i].x = (float)((unsigned char *)image.data)[k]/255.0f;
+                    pixels[i].y = (float)((unsigned char *)image.data)[k + 1]/255.0f;
+                    pixels[i].z = (float)((unsigned char *)image.data)[k + 2]/255.0f;
+                    pixels[i].w = (float)((unsigned char *)image.data)[k + 3]/255.0f;
+                    k += 4;
+                } break;
+                case UNCOMPRESSED_R8G8B8:
+                {
+                    pixels[i].x = (float)((unsigned char *)image.data)[k]/255.0f;
+                    pixels[i].y = (float)((unsigned char *)image.data)[k + 1]/255.0f;
+                    pixels[i].z = (float)((unsigned char *)image.data)[k + 2]/255.0f;
+                    pixels[i].w = 1.0f;
+                    k += 3;
+                } break;
+                case UNCOMPRESSED_R32:
+                {
+                    pixels[i].x = ((float *)image.data)[k];
+                    pixels[i].y = 0.0f;
+                    pixels[i].z = 0.0f;
+                    pixels[i].w = 1.0f;
+                } break;
+                case UNCOMPRESSED_R32G32B32:
+                {
+                    pixels[i].x = ((float *)image.data)[k];
+                    pixels[i].y = ((float *)image.data)[k + 1];
+                    pixels[i].z = ((float *)image.data)[k + 2];
+                    pixels[i].w = 1.0f;
+                    k += 3;
+                } break;
+                case UNCOMPRESSED_R32G32B32A32:
+                {
+                    pixels[i].x = ((float *)image.data)[k];
+                    pixels[i].y = ((float *)image.data)[k + 1];
+                    pixels[i].z = ((float *)image.data)[k + 2];
+                    pixels[i].w = ((float *)image.data)[k + 3];
+                    k += 4;
+                }
+                default: break;
+            }
+        }
+    }
+    return pixels;
 }
 
 int main(void)
@@ -130,7 +229,7 @@ int main(void)
 		pixels[i].b = val;
 		pixels[i].a = 255;
 	}
-	Image heightmapImage = LoadImageEx(pixels, MAP_RESOLUTION, MAP_RESOLUTION);
+	Image heightmapImage = {pixels, MAP_RESOLUTION, MAP_RESOLUTION, 1, UNCOMPRESSED_R8G8B8A8};
 	Texture2D heightmapTexture = LoadTextureFromImage(heightmapImage); // Convert image to texture (VRAM)
 	UnloadImage(heightmapImage); // Unload heightmap image from RAM, already uploaded to VRAM
 	SetTextureFilter(heightmapTexture, FILTER_BILINEAR);
@@ -231,8 +330,8 @@ int main(void)
 	skybox.materials[0].maps[0].texture = LoadTexture("resources/skyGradient.png");
 	SetTextureFilter(skybox.materials[0].maps[0].texture, FILTER_BILINEAR);
 	SetTextureWrap(skybox.materials[0].maps[0].texture, WRAP_CLAMP);
-	skybox.materials[0].maps[MAP_CUBEMAP].texture = GenTextureCubemap(shdrCubemap, texHDR, 1024);
-	skybox.materials[0].maps[MAP_IRRADIANCE].texture = GenTextureCubemap(shdrCubemap, texHDR2, 1024);
+	skybox.materials[0].maps[MAP_CUBEMAP].texture = GenTextureCubemap(shdrCubemap, texHDR, 1024, 0);
+	skybox.materials[0].maps[MAP_IRRADIANCE].texture = GenTextureCubemap(shdrCubemap, texHDR2, 1024, 0);
 	SetTextureFilter(skybox.materials[0].maps[MAP_CUBEMAP].texture, FILTER_BILINEAR);
 	SetTextureFilter(skybox.materials[0].maps[MAP_IRRADIANCE].texture, FILTER_BILINEAR);
 	GenTextureMipmaps(&skybox.materials[0].maps[MAP_CUBEMAP].texture);
@@ -458,7 +557,7 @@ int main(void)
 				pixels[i].a = 255;
 			}
 			UnloadTexture(heightmapTexture);
-			Image heightmapImage = LoadImageEx(pixels, MAP_RESOLUTION, MAP_RESOLUTION);
+	    Image heightmapImage = {pixels, MAP_RESOLUTION, MAP_RESOLUTION, 1, UNCOMPRESSED_R8G8B8A8};
 			heightmapTexture = LoadTextureFromImage(heightmapImage); // Convert image to texture (VRAM)
 			SetTextureFilter(heightmapTexture, FILTER_BILINEAR);
 			SetTextureWrap(heightmapTexture, WRAP_CLAMP);
@@ -492,7 +591,7 @@ int main(void)
 				pixels[i].a = 255;
 			}
 			UnloadTexture(heightmapTexture);
-			Image heightmapImage = LoadImageEx(pixels, MAP_RESOLUTION, MAP_RESOLUTION);
+	    Image heightmapImage = {pixels, MAP_RESOLUTION, MAP_RESOLUTION, 1, UNCOMPRESSED_R8G8B8A8};
 			heightmapTexture = LoadTextureFromImage(heightmapImage); // Convert image to texture (VRAM)
 			SetTextureFilter(heightmapTexture, FILTER_BILINEAR);
 			SetTextureWrap(heightmapTexture, WRAP_CLAMP);
@@ -538,7 +637,7 @@ int main(void)
 				pixels[i].a = 255;
 			}
 			UnloadTexture(heightmapTexture);
-			Image heightmapImage = LoadImageEx(pixels, MAP_RESOLUTION, MAP_RESOLUTION);
+	    Image heightmapImage = {pixels, MAP_RESOLUTION, MAP_RESOLUTION, 1, UNCOMPRESSED_R8G8B8A8};
 			heightmapTexture = LoadTextureFromImage(heightmapImage); // Convert image to texture (VRAM)
 			SetTextureFilter(heightmapTexture, FILTER_BILINEAR);
 			SetTextureWrap(heightmapTexture, WRAP_CLAMP);
@@ -615,15 +714,15 @@ int main(void)
 		if (IsKeyPressed(KEY_F9))
 		{
 			// take a screenshot
-			for (int i = 0; i < INT_MAX; i++)
-			{
-				const char* fileName = TextFormat("screen%i.png", i);
-				if (FileExists(fileName) == 0)
-				{
-					TakeScreenshot(fileName);
-					break;
-				}
-			}
+			//for (int i = 0; i < INT_MAX; i++)
+			//{
+			//	const char* fileName = TextFormat("screen%i.png", i);
+			//	if (FileExists(fileName) == 0)
+			//	{
+			//		TakeScreenshot(fileName);
+			//		break;
+			//	}
+			//}
 		}
 		EndDrawing();
 		//----------------------------------------------------------------------------------
