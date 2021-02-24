@@ -5,7 +5,7 @@ project(erosion LANGUAGES CXX C)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 
-set(SRC ${CMAKE_SOURCE_DIR}/src)
+set(SRC ${CMAKE_SOURCE_DIR})
 set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 include_directories("${SRC}")
 set(CMAKE_CXX_FLAGS "-Wall -pthread -O3")
