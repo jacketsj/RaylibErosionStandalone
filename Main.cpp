@@ -148,6 +148,31 @@ static Vector4 *GetImageDataNormalized(Image image)
     return pixels;
 }
 
+Image LoadImageEx(Color *pixels, int width, int height)
+{
+    Image image = { 0 };
+    image.data = NULL;
+    image.width = width;
+    image.height = height;
+    image.mipmaps = 1;
+    image.format = UNCOMPRESSED_R8G8B8A8;
+
+    int k = 0;
+
+    image.data = (unsigned char *)RL_MALLOC(image.width*image.height*4*sizeof(unsigned char));
+
+    for (int i = 0; i < image.width*image.height*4; i += 4)
+    {
+        ((unsigned char *)image.data)[i] = pixels[k].r;
+        ((unsigned char *)image.data)[i + 1] = pixels[k].g;
+        ((unsigned char *)image.data)[i + 2] = pixels[k].b;
+        ((unsigned char *)image.data)[i + 3] = pixels[k].a;
+        k++;
+    }
+
+    return image;
+}
+
 int main(void)
 {
 	// Initialization
@@ -229,7 +254,7 @@ int main(void)
 		pixels[i].b = val;
 		pixels[i].a = 255;
 	}
-	Image heightmapImage = {pixels, MAP_RESOLUTION, MAP_RESOLUTION, 1, UNCOMPRESSED_R8G8B8A8};
+  Image heightmapImage = LoadImageEx(pixels, MAP_RESOLUTION, MAP_RESOLUTION);
 	Texture2D heightmapTexture = LoadTextureFromImage(heightmapImage); // Convert image to texture (VRAM)
 	UnloadImage(heightmapImage); // Unload heightmap image from RAM, already uploaded to VRAM
 	SetTextureFilter(heightmapTexture, FILTER_BILINEAR);
@@ -557,7 +582,7 @@ int main(void)
 				pixels[i].a = 255;
 			}
 			UnloadTexture(heightmapTexture);
-	    Image heightmapImage = {pixels, MAP_RESOLUTION, MAP_RESOLUTION, 1, UNCOMPRESSED_R8G8B8A8};
+      Image heightmapImage = LoadImageEx(pixels, MAP_RESOLUTION, MAP_RESOLUTION);
 			heightmapTexture = LoadTextureFromImage(heightmapImage); // Convert image to texture (VRAM)
 			SetTextureFilter(heightmapTexture, FILTER_BILINEAR);
 			SetTextureWrap(heightmapTexture, WRAP_CLAMP);
@@ -591,7 +616,7 @@ int main(void)
 				pixels[i].a = 255;
 			}
 			UnloadTexture(heightmapTexture);
-	    Image heightmapImage = {pixels, MAP_RESOLUTION, MAP_RESOLUTION, 1, UNCOMPRESSED_R8G8B8A8};
+      Image heightmapImage = LoadImageEx(pixels, MAP_RESOLUTION, MAP_RESOLUTION);
 			heightmapTexture = LoadTextureFromImage(heightmapImage); // Convert image to texture (VRAM)
 			SetTextureFilter(heightmapTexture, FILTER_BILINEAR);
 			SetTextureWrap(heightmapTexture, WRAP_CLAMP);
@@ -637,7 +662,7 @@ int main(void)
 				pixels[i].a = 255;
 			}
 			UnloadTexture(heightmapTexture);
-	    Image heightmapImage = {pixels, MAP_RESOLUTION, MAP_RESOLUTION, 1, UNCOMPRESSED_R8G8B8A8};
+      Image heightmapImage = LoadImageEx(pixels, MAP_RESOLUTION, MAP_RESOLUTION);
 			heightmapTexture = LoadTextureFromImage(heightmapImage); // Convert image to texture (VRAM)
 			SetTextureFilter(heightmapTexture, FILTER_BILINEAR);
 			SetTextureWrap(heightmapTexture, WRAP_CLAMP);
