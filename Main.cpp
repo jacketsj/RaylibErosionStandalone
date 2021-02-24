@@ -330,8 +330,8 @@ int main(void)
 	skybox.materials[0].maps[0].texture = LoadTexture("resources/skyGradient.png");
 	SetTextureFilter(skybox.materials[0].maps[0].texture, FILTER_BILINEAR);
 	SetTextureWrap(skybox.materials[0].maps[0].texture, WRAP_CLAMP);
-	skybox.materials[0].maps[MAP_CUBEMAP].texture = GenTextureCubemap(shdrCubemap, texHDR, 1024, 0);
-	skybox.materials[0].maps[MAP_IRRADIANCE].texture = GenTextureCubemap(shdrCubemap, texHDR2, 1024, 0);
+	skybox.materials[0].maps[MAP_CUBEMAP].texture = GenTextureCubemap(shdrCubemap, texHDR, 1024, UNCOMPRESSED_R8G8B8A8);
+	skybox.materials[0].maps[MAP_IRRADIANCE].texture = GenTextureCubemap(shdrCubemap, texHDR2, 1024, UNCOMPRESSED_R8G8B8A8);
 	SetTextureFilter(skybox.materials[0].maps[MAP_CUBEMAP].texture, FILTER_BILINEAR);
 	SetTextureFilter(skybox.materials[0].maps[MAP_IRRADIANCE].texture, FILTER_BILINEAR);
 	GenTextureMipmaps(&skybox.materials[0].maps[MAP_CUBEMAP].texture);
